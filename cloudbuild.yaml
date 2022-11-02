@@ -22,7 +22,7 @@ steps:
   - run
   - --filename=deployment.yaml
   - --cluster=porto-production
-  - --location=asia-southeast2-a
+  - --location=asia-southeast1-a
   timeout: 900s
 
 # Global Timeout
