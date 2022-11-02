@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: porto
+  namespace: production
+  labels:
+    app: porto
+spec:
+  selector:
+    app: porto
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+  type: NodePort
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: porto
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: porto
+  strategy:
+    type: RollingUpdate
+  template: #Template for container
+    metadata:
+      labels:
+        app: porto
+    spec:
+      containers:
+      - name: porto
+        image:  asia.gcr.io/$PROJECT_ID/production/porto:$SHORT_SHA
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: porto
+        resources:
+          requests:
+            cpu: 50m
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: porto
+  namespace: production
+spec:
+  maxReplicas: 15
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: porto
+  targetCPUUtilizationPercentage: 100
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: porto
+  namespace: production
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: porto
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: porto
+spec:
+  rules:
+    - host: app.limsyanwo.com
+      http:
+        paths:
+        - path: /*
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: porto
+              port: 
+                number: 80
+
+---
+apiVersion: networking.gke.io/v1beta2
+kind: ManagedCertificate
+metadata:
+  name: porto
+  namespace: production
+spec:
+  domains:
+    - app.limsyanwo.com
